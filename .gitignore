@@ -1,0 +1,22 @@
+# 환경변수 (절대 커밋 금지)
+.env
+
+# Backend
+myweb-backend/build/
+myweb-backend/.gradle/
+myweb-backend/out/
+*.jar
+*.class
+
+# Frontend
+myweb-frontend/node_modules/
+myweb-frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
