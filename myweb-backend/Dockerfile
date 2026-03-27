@@ -1,24 +1,9 @@
-# ── Stage 1: Gradle 빌드 ──────────────────────────────
-FROM eclipse-temurin:17-jdk-jammy AS build
-
-WORKDIR /app
-
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
-
-RUN chmod +x gradlew
-
-COPY src src
-RUN ./gradlew bootJar -x test
-
-# ── Stage 2: 실행 이미지 ───────────────────────────────
+# CI에서 미리 빌드된 JAR을 복사만 함 (컴파일 없음)
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY build/libs/*.jar app.jar
 
 EXPOSE 8080
 

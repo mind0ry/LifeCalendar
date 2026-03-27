@@ -1,22 +1,11 @@
-# ── Stage 1: React 빌드 ───────────────────────────────
-FROM node:18-alpine AS build
-
-WORKDIR /app
-
-COPY package*.json .
-RUN npm install
-
-COPY . .
-RUN npm run build
-
-# ── Stage 2: 정적 파일 서빙 (serve) ───────────────────
+# CI에서 미리 빌드된 dist를 복사만 함 (npm build 없음)
 FROM node:18-alpine
 
 WORKDIR /app
 
 RUN npm install -g serve
 
-COPY --from=build /app/dist .
+COPY dist .
 
 EXPOSE 3000
 
