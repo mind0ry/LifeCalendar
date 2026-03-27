@@ -80,45 +80,6 @@ myweb/
 
 <br>
 
-## 실행 방법
-
-### 사전 준비
-
-- Java 17+
-- Node.js 18+
-- MySQL 8
-
-### 1. 데이터베이스 생성
-
-```sql
-CREATE DATABASE myweb_db
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-```
-
-### 2. 백엔드 실행
-
-```bash
-cd myweb-backend
-
-# application.yml에서 DB 계정 정보 수정 후 실행
-./gradlew bootRun
-```
-
-> `src/main/resources/application.yml`의 `username` / `password` 를 본인 MySQL 계정으로 변경하세요.
-
-### 3. 프론트엔드 실행
-
-```bash
-cd myweb-frontend
-npm install
-npm run dev
-```
-
-브라우저에서 `http://localhost:5173` 접속
-
-<br>
-
 ## 스크린샷
 
 | 달력 메인 | 통계 |
