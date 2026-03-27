@@ -12,7 +12,7 @@ function CalendarHeader({ year, month, onPrev, onNext }: Props) {
     <div style={containerStyle}>
       <button onClick={onPrev} style={btnStyle}>{'‹'}</button>
       <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
-        {year}년 {month}월 cicd
+        {year}년 {month}월
       </h2>
       <button onClick={onNext} style={btnStyle}>{'›'}</button>
     </div>
