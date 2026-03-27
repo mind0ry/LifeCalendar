@@ -5,47 +5,115 @@ on:
     branches: [main]
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  # ── amd64 / arm64 각각 네이티브 러너에서 빌드 ──────────
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm   # GitHub 네이티브 ARM 러너 (무료)
+
+    runs-on: ${{ matrix.runner }}
 
     steps:
-      # ── 1. 코드 체크아웃 ────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. QEMU 설정 (arm64 크로스 컴파일 에뮬레이터) ─
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # ── 3. Docker Buildx 설정 ───────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ── 4. Docker Hub 로그인 ────────────────────────
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # ── 5. Backend 멀티 플랫폼 빌드 & Push ──────────
-      - name: Build and Push Backend
+      # 플랫폼 이름에서 / 제거 (amd64, arm64)
+      - name: Set platform slug
+        run: echo "PLATFORM_SLUG=$(echo ${{ matrix.platform }} | tr '/' '-' | cut -d'-' -f2-)" >> $GITHUB_ENV
+
+      # digest로 push (태그 없이) → 나중에 merge 잡에서 합침
+      - name: Build and push Backend digest
+        id: build-backend
         uses: docker/build-push-action@v5
         with:
           context: ./myweb-backend
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/myweb-backend:latest
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ secrets.DOCKER_USERNAME }}/myweb-backend,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ── 6. Frontend 멀티 플랫폼 빌드 & Push ─────────
-      - name: Build and Push Frontend
+      - name: Build and push Frontend digest
+        id: build-frontend
         uses: docker/build-push-action@v5
         with:
           context: ./myweb-frontend
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/myweb-frontend:latest
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ secrets.DOCKER_USERNAME }}/myweb-frontend,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # digest 파일 저장 → artifacts로 merge 잡에 전달
+      - name: Save digests
+        run: |
+          mkdir -p /tmp/digests/backend /tmp/digests/frontend
+          touch "/tmp/digests/backend/${{ steps.build-backend.outputs.digest }}"
+          touch "/tmp/digests/frontend/${{ steps.build-frontend.outputs.digest }}"
+
+      - name: Upload backend digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-digest-${{ env.PLATFORM_SLUG }}
+          path: /tmp/digests/backend
+
+      - name: Upload frontend digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-digest-${{ env.PLATFORM_SLUG }}
+          path: /tmp/digests/frontend
+
+  # ── amd64 + arm64 digest를 하나의 멀티 아키텍처 이미지로 합치기 ──
+  merge:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download backend digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests/backend
+          pattern: backend-digest-*
+          merge-multiple: true
+
+      - name: Download frontend digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests/frontend
+          pattern: frontend-digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Merge Backend manifests
+        working-directory: /tmp/digests/backend
+        run: |
+          docker buildx imagetools create \
+            -t ${{ secrets.DOCKER_USERNAME }}/myweb-backend:latest \
+            $(printf '${{ secrets.DOCKER_USERNAME }}/myweb-backend@%s ' $(ls))
+
+      - name: Merge Frontend manifests
+        working-directory: /tmp/digests/frontend
+        run: |
+          docker buildx imagetools create \
+            -t ${{ secrets.DOCKER_USERNAME }}/myweb-frontend:latest \
+            $(printf '${{ secrets.DOCKER_USERNAME }}/myweb-frontend@%s ' $(ls))
