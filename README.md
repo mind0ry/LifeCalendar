@@ -80,8 +80,17 @@ myweb/
 
 <br>
 
+## 배포                                                                                                                                                                                                      
+macOS 환경에서 개인 용도로 사용하기 위해 Docker 이미지로 패키징하고 CI/CD를 구성했습니다.             
+개발 서버를 별도로 켜두지 않아도 컨테이너가 백그라운드에서 상시 실행되며, macOS 재시작 후에도         
+자동으로 다시 올라옵니다.                                                                      
+                                                                                                                                                                                                          git push (main) → GitHub Actions 빌드 → Docker Hub 이미지 push → 로컬 Watchtower 자동 감지 → 컨테이너 재시작
+
+<br>
+
 ## 스크린샷
 
-| 달력 메인 | 통계 |
+| 달력 및 통계 | 모달 |
 |-----------|------|
-| 날짜별 일정·수입·지출 표시 | 월별 추이 + 카테고리 차트 |
+| <img width="956" height="887" alt="스크린샷 2026-03-27 오후 11 25 42" src="https://github.com/user-attachments/assets/b58f8f09-6dba-4b5e-ba4d-a3ba082cc1a6" />
+| <img width="591" height="580" alt="스크린샷 2026-03-27 오후 11 26 28" src="https://github.com/user-attachments/assets/defc9695-8569-40b1-805b-7d0bbe9290f9" /> |
